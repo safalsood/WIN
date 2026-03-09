@@ -89,18 +89,28 @@ export const fetchBaseCategoriesFromSheet = async (): Promise<CategoryItem[]> =>
 export const getBaseCategoriesWithFallback = async (
   fallbackCategories: CategoryItem[]
 ): Promise<CategoryItem[]> => {
-  console.log("Attempting to fetch Base Categories from Google Sheet...");
-  const sheetCategories = await fetchBaseCategoriesFromSheet();
+  console.log("Fetching Base Categories from Supabase...");
+
+  const rows = await db
+    .selectFrom("base_categories")
+    .select(["category"])
+    .where("status", "=", true)
+    .execute();
+
+  const sheetCategories = rows.map((r) => ({
+    id: r.category,
+    name: r.category,
+  }));
 
   if (sheetCategories && sheetCategories.length > 0) {
     console.log(
-      `Successfully fetched ${sheetCategories.length} categories from Google Sheet.`
+      `Successfully fetched ${sheetCategories.length} categories from Supabase.`
     );
     return sheetCategories;
   }
 
   console.warn(
-    "Google Sheet fetch failed or returned empty. Using fallback categories."
+    "Supabase fetch failed or returned empty. Using fallback categories."
   );
   return fallbackCategories;
 };
