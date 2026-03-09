@@ -90,7 +90,7 @@ const TOUGH_LETTER_FRIENDLY_IDS = new Set([
  * Base categories are locked for the match and must be broad.
  * Fetches categories from Google Sheets with local fallback.
  */
-eexport const selectBaseCategory = async (): Promise<CategoryItem> => {
+export const selectBaseCategory = async (): Promise<CategoryItem> => {
   const rows = await db
     .selectFrom("base_categories")
     .select(["category"])
@@ -161,15 +161,15 @@ export const estimateLetterCompatibility = (category: CategoryItem, letters: str
  * Now async to fetch dynamic difficulty scores from analytics.
  */
 export const selectMiniCategory = async (options: SelectMiniCategoryOptions): Promise<CategoryItem> => {
-  const {
-    currentLetters,
-    usedMiniCategories,
-    failedMiniCategories,
-    consecutiveFailures,
-    baseCategory,
+const {
+  currentLetters,
+  usedMiniCategories,
+  failedMiniCategories,
+  consecutiveFailures,
+  baseCategory,
   playerCategoryHistories = [],
-    playerId
-  } = options;
+  playerId,
+} = options;
 
   // 0. Fetch Mini Categories from Google Sheets (with fallback)
  const rows = await db
