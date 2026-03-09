@@ -68,54 +68,20 @@ const parseCSV = (text: string): string[][] => {
  * - Column A (index 0): Category Name
  * - Column B (index 1): Status (Active/Inactive/Blank)
  */
-export const fetchMiniCategoriesFromSheet = async (): Promise<
-  CategoryItem[]
-> => {
-  // Using gviz/tq to select by sheet name
-  const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(
-    SHEET_TAB_NAME
-  )}`;
-
+export const fetchMiniCategoriesFromSheet = async (): Promise<CategoryItem[]> => {
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.statusText}`);
-    }
+    const rows = await db
+      .selectFrom("mini_categories")
+      .select(["category"])
+      .where("status", "=", true)
+      .execute();
 
-    const csvText = await response.text();
-    const rows = parseCSV(csvText);
-
-    const categories: CategoryItem[] = [];
-
-    // Iterate through rows
-    rows.forEach((row, index) => {
-      // Skip header row if it exists (simple heuristic)
-      if (index === 0 && row[0]?.toLowerCase() === "category") {
-        return;
-      }
-
-      const categoryName = row[0]?.trim();
-      const status = row[1]?.trim().toLowerCase();
-
-      // 1. Check if category name exists
-      if (!categoryName) return;
-
-      // 2. Check status
-      // - "inactive" -> skip
-      // - "active" or blank -> keep
-      if (status === "inactive") {
-        return;
-      }
-
-      categories.push({
-        id: `mini_gs_${index}`, // Auto-generated ID based on row index
-        name: categoryName,
-      });
-    });
-
-    return categories;
+    return rows.map((r) => ({
+      id: r.category,
+      name: r.category,
+    }));
   } catch (error) {
-    console.error("Error fetching mini categories from Google Sheet:", error);
+    console.error("Error fetching mini categories from Supabase:", error);
     return [];
   }
 };

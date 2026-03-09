@@ -8,6 +8,7 @@ import {
   getMiniCategoriesWithFallback,
   getRecentCategoryLetterCombinations
 } from "./googleSheetsMiniCategories";
+import { db } from "./db";
 import { TOUGH_LETTERS } from "./gameLogic";
 import { getCategoryDifficultyScore } from "./gameAnalytics";
 
@@ -89,8 +90,24 @@ const TOUGH_LETTER_FRIENDLY_IDS = new Set([
  * Base categories are locked for the match and must be broad.
  * Fetches categories from Google Sheets with local fallback.
  */
-export const selectBaseCategory = async (): Promise<CategoryItem> => {
-  const pool = await getBaseCategoriesWithFallback(BASE_CATEGORY_POOL);
+eexport const selectBaseCategory = async (): Promise<CategoryItem> => {
+  const rows = await db
+    .selectFrom("base_categories")
+    .select(["category"])
+    .where("status", "=", true)
+    .execute();
+
+  const pool: CategoryItem[] = rows.map((r) => ({
+    id: r.category,
+    name: r.category,
+  }));
+
+  if (pool.length === 0) {
+    console.warn("No base categories found in DB. Using fallback.");
+    const randomIndex = Math.floor(Math.random() * BASE_CATEGORY_POOL.length);
+    return BASE_CATEGORY_POOL[randomIndex];
+  }
+
   const randomIndex = Math.floor(Math.random() * pool.length);
   return pool[randomIndex];
 };
@@ -155,7 +172,16 @@ export const selectMiniCategory = async (options: SelectMiniCategoryOptions): Pr
   } = options;
 
   // 0. Fetch Mini Categories from Google Sheets (with fallback)
-  const availableMiniCategories = await getMiniCategoriesWithFallback(CATEGORY_POOL);
+ const rows = await db
+  .selectFrom("mini_categories")
+  .select(["category"])
+  .where("status", "=", true)
+  .execute();
+
+const availableMiniCategories: CategoryItem[] = rows.map((r) => ({
+  id: r.category,
+  name: r.category,
+}));
 
   // 1. Start with all unused Mini Categories
   // We also exclude the base category ID if it happens to match a mini category ID (unlikely but safe)
@@ -297,8 +323,16 @@ export const selectBaseCategoryForPlayers = async (
   playerCategoryHistories: string[] = []
 ): Promise<CategoryItem> => {
   // Fetch base categories from Google Sheets with fallback to local pool
-  const pool = await getBaseCategoriesWithFallback(BASE_CATEGORY_POOL);
+ const rows = await db
+  .selectFrom("base_categories")
+  .select(["category"])
+  .where("status", "=", true)
+  .execute();
 
+const pool: CategoryItem[] = rows.map((r) => ({
+  id: r.category,
+  name: r.category,
+}));
   // Filter out categories that any player has seen in their recent history
   let availableCategories = pool.filter(
     c => !playerCategoryHistories.includes(c.name)

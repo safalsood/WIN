@@ -1,3 +1,4 @@
+import { db } from "./db";
 import { CategoryItem } from "./categoryPool";
 
 export const GOOGLE_SHEET_ID = "1tEleNU1mI1CLiPqoiOA8OJZFyUtEgygySPCP580on0A";
@@ -62,54 +63,20 @@ const parseCSV = (text: string): string[][] => {
  * Expects data in Column B (index 1).
  * Column A contains row numbers, Column B contains category names.
  */
-export const fetchBaseCategoriesFromSheet = async (): Promise<
-  CategoryItem[]
-> => {
-  const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=0`;
-
+export const fetchBaseCategoriesFromSheet = async (): Promise<CategoryItem[]> => {
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.statusText}`);
-    }
+    const rows = await db
+      .selectFrom("base_categories")
+      .select(["category"])
+      .where("status", "=", true)
+      .execute();
 
-    const csvText = await response.text();
-    const rows = parseCSV(csvText);
-
-    const categories: CategoryItem[] = [];
-
-    // Iterate through rows
-    rows.forEach((row, index) => {
-      // Column B is index 1 (Column A contains row numbers)
-      const rawValue = row[1];
-
-      if (!rawValue) return;
-
-      const cleanedValue = rawValue.trim();
-
-      // Filter out empty values
-      if (!cleanedValue) return;
-
-      // Filter out likely headers (simple heuristic: exact match or row 0 if it looks like a header)
-      // The prompt says "skip 'Category', 'Base Category', etc."
-      const lowerVal = cleanedValue.toLowerCase();
-      if (
-        lowerVal === "category" ||
-        lowerVal === "base category" ||
-        lowerVal === "base_category"
-      ) {
-        return;
-      }
-
-      categories.push({
-        id: `gs_${index}`, // Auto-generated ID based on row index
-        name: cleanedValue,
-      });
-    });
-
-    return categories;
+    return rows.map((r) => ({
+      id: r.category,
+      name: r.category,
+    }));
   } catch (error) {
-    console.error("Error fetching categories from Google Sheet:", error);
+    console.error("Error fetching categories from Supabase:", error);
     return [];
   }
 };
